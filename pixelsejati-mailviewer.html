@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PixelSejati · Mail Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Lora:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --p900: #3b0764; --p800: #4c1d95; --p700: #5b21b6; --p600: #7c3aed;
+  --p500: #8b5cf6; --p400: #a78bfa; --p300: #c4b5fd; --p200: #ddd6fe;
+  --p100: #ede9fe; --p50: #f5f3ff; --white: #ffffff;
+  --ink: #1a0533; --ink2: #3d1a6e; --muted: #7c6b99; --border: #e8e2f8;
+  --shadow: 0 4px 32px rgba(91,33,182,0.10); --shadow-lg: 0 12px 48px rgba(91,33,182,0.18);
+  --green: #10b981; --danger: #ef4444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Mono', monospace; background: var(--p50); color: var(--ink); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* HEADER */
+header {
+  background: var(--white); border-bottom: 1.5px solid var(--border);
+  padding: 0 32px; height: 60px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 200;
+  box-shadow: 0 2px 12px rgba(91,33,182,0.06);
+}
+.logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; color: var(--p600); letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+.logo-dot { width: 8px; height: 8px; background: var(--p500); border-radius: 50%; display: inline-block; }
+.tag { font-size: 0.68rem; font-family: 'Syne', sans-serif; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; background: var(--p100); color: var(--p700); }
+
+/* LAYOUT */
+.app { display: flex; flex: 1; height: calc(100vh - 60px); overflow: hidden; }
+
+/* SIDEBAR */
+.sidebar { width: 260px; min-width: 260px; background: var(--white); border-right: 1.5px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-header { padding: 20px 20px 12px; border-bottom: 1px solid var(--border); }
+.sidebar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.72rem; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.btn-add-account { width: 100%; padding: 9px 14px; background: var(--p600); color: white; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; }
+.btn-add-account:hover { background: var(--p700); transform: translateY(-1px); }
+.accounts-list { flex: 1; overflow-y: auto; padding: 8px; }
+.account-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: all 0.12s; position: relative; margin-bottom: 2px; }
+.account-item:hover { background: var(--p50); }
+.account-item.active { background: var(--p100); }
+.account-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--p600), var(--p400)); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.78rem; color: white; flex-shrink: 0; }
+.account-info { flex: 1; min-width: 0; }
+.account-name { font-size: 0.75rem; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.account-status { font-size: 0.65rem; color: var(--muted); margin-top: 1px; }
+.account-remove { opacity: 0; background: none; border: none; cursor: pointer; color: var(--danger); font-size: 14px; padding: 2px; border-radius: 4px; transition: opacity 0.1s; }
+.account-item:hover .account-remove { opacity: 1; }
+.sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 0.65rem; color: var(--muted); text-align: center; }
+
+/* EMAIL LIST */
+.email-list-panel { width: 320px; min-width: 320px; background: var(--white); border-right: 1.5px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.panel-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.panel-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn-refresh { background: var(--p50); border: 1.5px solid var(--border); color: var(--p600); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.12s; flex-shrink: 0; }
+.btn-refresh:hover { background: var(--p100); }
+.btn-refresh.spinning { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.search-box { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+.search-box input { width: 100%; padding: 7px 12px; border: 1.5px solid var(--border); border-radius: 7px; font-family: 'DM Mono', monospace; font-size: 0.75rem; color: var(--ink); outline: none; background: var(--p50); transition: border-color 0.1s; }
+.search-box input:focus { border-color: var(--p400); background: white; }
+.email-list { flex: 1; overflow-y: auto; }
+.email-item { padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; position: relative; }
+.email-item:hover { background: var(--p50); }
+.email-item.active { background: var(--p100); border-left: 3px solid var(--p600); }
+.email-item.unread .email-subject { font-weight: 700; color: var(--ink); }
+.email-item.unread::after { content: ''; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 7px; height: 7px; border-radius: 50%; background: var(--p600); }
+.email-from { font-size: 0.72rem; color: var(--muted); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.email-subject { font-size: 0.78rem; color: var(--ink2); font-weight: 500; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.email-snippet { font-size: 0.68rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.email-date { font-size: 0.63rem; color: var(--muted); position: absolute; top: 14px; right: 14px; }
+
+/* EMPTY STATE */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 10px; color: var(--muted); padding: 20px; text-align: center; }
+.empty-icon { font-size: 2.5rem; opacity: 0.4; }
+.empty-text { font-size: 0.78rem; font-family: 'Syne', sans-serif; font-weight: 600; }
+.empty-sub { font-size: 0.68rem; }
+
+/* EMAIL CONTENT */
+.email-content-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--p50); }
+.content-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 14px; color: var(--muted); }
+.content-placeholder .big-icon { font-size: 4rem; opacity: 0.2; }
+.content-placeholder p { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.85rem; color: var(--muted); }
+.email-content { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+.email-content.visible { display: flex; }
+.content-header { background: var(--white); border-bottom: 1.5px solid var(--border); padding: 20px 28px 16px; }
+.content-subject { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--ink); margin-bottom: 12px; line-height: 1.3; }
+.content-meta { display: flex; flex-direction: column; gap: 4px; }
+.meta-row { display: flex; gap: 8px; font-size: 0.72rem; align-items: baseline; }
+.meta-label { color: var(--muted); min-width: 50px; }
+.meta-value { color: var(--ink2); font-weight: 500; }
+.content-actions { padding: 12px 28px; background: var(--white); border-bottom: 1.5px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.action-label { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-right: 4px; }
+.link-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 6px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.72rem; cursor: pointer; border: none; transition: all 0.12s; text-decoration: none; }
+.link-btn.verify { background: var(--p600); color: white; }
+.link-btn.verify:hover { background: var(--p700); }
+.link-btn.normal { background: var(--p100); color: var(--p700); }
+.link-btn.normal:hover { background: var(--p200); }
+.content-body { flex: 1; overflow-y: auto; padding: 24px 28px; }
+.email-body-text { font-family: 'Lora', serif; font-size: 0.88rem; line-height: 1.8; color: var(--ink2); white-space: pre-wrap; word-break: break-word; }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(59,7,100,0.25); backdrop-filter: blur(4px); z-index: 500; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--white); border-radius: 16px; padding: 32px; width: 500px; max-width: 95vw; box-shadow: var(--shadow-lg); border: 1.5px solid var(--border); }
+.modal-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; color: var(--ink); margin-bottom: 6px; }
+.modal-sub { font-size: 0.72rem; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 6px; }
+.form-input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--ink); outline: none; transition: border-color 0.1s; }
+.form-input:focus { border-color: var(--p500); }
+.form-hint { font-size: 0.65rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.form-hint.warning { color: #d97706; background: #fef3c7; padding: 6px 10px; border-radius: 6px; margin-top: 6px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+.btn-cancel { padding: 9px 18px; border-radius: 8px; border: 1.5px solid var(--border); background: white; color: var(--muted); cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.8rem; transition: all 0.1s; }
+.btn-cancel:hover { background: var(--p50); }
+.btn-connect { padding: 9px 18px; border-radius: 8px; border: none; background: var(--p600); color: white; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.8rem; transition: all 0.15s; }
+.btn-connect:hover { background: var(--p700); }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--p200); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--p300); }
+
+/* TOAST */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: white; padding: 12px 18px; border-radius: 10px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.78rem; z-index: 999; transform: translateY(80px); opacity: 0; transition: all 0.3s; max-width: 320px; }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { background: #065f46; }
+.toast.error { background: #991b1b; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span class="logo-dot"></span>PixelSejati · Mail Viewer</div>
+  <div class="tag">Multi-Account</div>
+</header>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">Akun Gmail</div>
+      <button class="btn-add-account" onclick="openModal()">＋ Tambah Akun</button>
+    </div>
+    <div class="accounts-list" id="accountsList">
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">Belum ada akun</div>
+        <div class="empty-sub">Klik "+ Tambah Akun" untuk mulai</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">Credentials tersimpan di browser · Tidak dikirim ke server manapun</div>
+  </aside>
+
+  <!-- EMAIL LIST -->
+  <div class="email-list-panel">
+    <div class="panel-header">
+      <div class="panel-title" id="panelTitle">Pilih akun</div>
+      <button class="btn-refresh" id="refreshBtn" onclick="refreshEmails()" title="Refresh">↻</button>
+    </div>
+    <div class="search-box">
+      <input type="text" id="searchEmails" placeholder="Cari email..." oninput="filterEmails()">
+    </div>
+    <div class="email-list" id="emailList">
+      <div class="empty-state">
+        <div class="empty-icon">✉️</div>
+        <div class="empty-text">Tidak ada email</div>
+        <div class="empty-sub">Pilih akun untuk melihat email</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMAIL CONTENT -->
+  <div class="email-content-panel">
+    <div class="content-placeholder" id="contentPlaceholder">
+      <div class="big-icon">📬</div>
+      <p>Pilih email untuk dibaca</p>
+    </div>
+    <div class="email-content" id="emailContent">
+      <div class="content-header">
+        <div class="content-subject" id="contentSubject"></div>
+        <div class="content-meta">
+          <div class="meta-row"><span class="meta-label">Dari</span><span class="meta-value" id="contentFrom"></span></div>
+          <div class="meta-row"><span class="meta-label">Kepada</span><span class="meta-value" id="contentTo"></span></div>
+          <div class="meta-row"><span class="meta-label">Tanggal</span><span class="meta-value" id="contentDate"></span></div>
+        </div>
+      </div>
+      <div class="content-actions" id="contentActions"></div>
+      <div class="content-body">
+        <div class="email-body-text" id="contentBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Tambah Akun Gmail</div>
+    <div class="modal-sub">
+      Masukkan Client ID dan Client Secret dari Google Cloud Console. 
+      Data ini <strong>hanya tersimpan di browser kamu</strong> dan tidak dikirim ke server manapun.
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Nama Akun (label)</label>
+      <input type="text" class="form-input" id="inputName" placeholder="Contoh: Gmail Utama">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Client ID</label>
+      <input type="text" class="form-input" id="inputClientId" placeholder="xxxx.apps.googleusercontent.com">
+      <div class="form-hint">Dari Google Cloud Console → APIs & Services → Credentials</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Client Secret</label>
+      <input type="password" class="form-input" id="inputClientSecret" placeholder="GOCSPX-...">
+      <div class="form-hint warning">⚠ Jangan bagikan Client Secret ke siapapun. Data ini hanya tersimpan di browser kamu.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Batal</button>
+      <button class="btn-connect" onclick="connectAccount()">Hubungkan → Login Google</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'pixelsejati_mailviewer_v2';
+let accounts = [];
+let activeAccountId = null;
+let allEmails = [];
+let activeEmailId = null;
+
+function loadAccounts() {
+  try { accounts = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch { accounts = []; }
+}
+function saveAccounts() { localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts)); }
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show' + (type?' '+type:'');
+  setTimeout(() => t.className='toast', 3000);
+}
+
+function openModal() {
+  document.getElementById('inputName').value='';
+  document.getElementById('inputClientId').value='';
+  document.getElementById('inputClientSecret').value='';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+document.getElementById('modalOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+
+function connectAccount() {
+  const name = document.getElementById('inputName').value.trim();
+  const clientId = document.getElementById('inputClientId').value.trim();
+  const clientSecret = document.getElementById('inputClientSecret').value.trim();
+  if (!name) { showToast('Isi nama akun dulu.','error'); return; }
+  if (!clientId) { showToast('Isi Client ID dulu.','error'); return; }
+  if (!clientSecret) { showToast('Isi Client Secret dulu.','error'); return; }
+
+  const id = Date.now().toString();
+  accounts.push({ id, name, clientId, clientSecret, accessToken: null, refreshToken: null, tokenExpiry: null, email: null });
+  saveAccounts();
+  closeModal();
+  renderSidebar();
+  startOAuth(id);
+}
+
+// OAuth - redirect URI = URL halaman ini (GitHub Pages)
+function getRedirectUri() {
+  return window.location.origin + window.location.pathname;
+}
+
+function startOAuth(accountId) {
+  const acc = accounts.find(a => a.id === accountId);
+  if (!acc) return;
+  sessionStorage.setItem('oauth_pending', accountId);
+  const params = new URLSearchParams({
+    client_id: acc.clientId,
+    redirect_uri: getRedirectUri(),
+    response_type: 'code',
+    scope: 'https://www.googleapis.com/auth/gmail.readonly',
+    access_type: 'offline',
+    prompt: 'consent',
+    state: accountId
+  });
+  window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+}
+
+async function handleOAuthCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  if (!code || !state) return;
+  window.history.replaceState({}, '', window.location.pathname);
+  const acc = accounts.find(a => a.id === state);
+  if (!acc) return;
+  showToast('Menghubungkan akun...','');
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: acc.clientId,
+        client_secret: acc.clientSecret,
+        redirect_uri: getRedirectUri(),
+        grant_type: 'authorization_code'
+      })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      acc.accessToken = data.access_token;
+      acc.refreshToken = data.refresh_token;
+      acc.tokenExpiry = Date.now() + (data.expires_in * 1000);
+      const profile = await fetch('https://www.googleapis.com/gmail/v1/users/me/profile', {
+        headers: { Authorization: 'Bearer ' + acc.accessToken }
+      }).then(r => r.json());
+      acc.email = profile.emailAddress || '';
+      saveAccounts();
+      renderSidebar();
+      showToast('✓ Akun ' + acc.name + ' berhasil terhubung!', 'success');
+      selectAccount(acc.id);
+    } else {
+      showToast('Gagal: ' + (data.error_description || data.error), 'error');
+    }
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function refreshToken(acc) {
+  if (!acc.refreshToken) return false;
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: acc.clientId,
+        client_secret: acc.clientSecret,
+        refresh_token: acc.refreshToken,
+        grant_type: 'refresh_token'
+      })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      acc.accessToken = data.access_token;
+      acc.tokenExpiry = Date.now() + (data.expires_in * 1000);
+      saveAccounts();
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+async function getValidToken(acc) {
+  if (!acc.accessToken) return null;
+  if (acc.tokenExpiry && Date.now() > acc.tokenExpiry - 60000) {
+    const ok = await refreshToken(acc);
+    if (!ok) return null;
+  }
+  return acc.accessToken;
+}
+
+function renderSidebar() {
+  const list = document.getElementById('accountsList');
+  if (accounts.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Belum ada akun</div><div class="empty-sub">Klik "+ Tambah Akun" untuk mulai</div></div>`;
+    return;
+  }
+  list.innerHTML = accounts.map(acc => `
+    <div class="account-item ${acc.id===activeAccountId?'active':''}" onclick="selectAccount('${acc.id}')">
+      <div class="account-avatar">${acc.name.charAt(0).toUpperCase()}</div>
+      <div class="account-info">
+        <div class="account-name">${esc(acc.name)}</div>
+        <div class="account-status">${acc.email ? esc(acc.email) : (acc.accessToken?'Terhubung':'⚠ Belum login')}</div>
+      </div>
+      <button class="account-remove" onclick="removeAccount(event,'${acc.id}')" title="Hapus">✕</button>
+    </div>`).join('');
+}
+
+function removeAccount(e, id) {
+  e.stopPropagation();
+  if (!confirm('Hapus akun ini?')) return;
+  accounts = accounts.filter(a => a.id !== id);
+  saveAccounts();
+  if (activeAccountId === id) { activeAccountId=null; allEmails=[]; renderEmailList([]); showEmailContent(null); }
+  renderSidebar();
+}
+
+async function selectAccount(id) {
+  activeAccountId = id;
+  renderSidebar();
+  const acc = accounts.find(a => a.id === id);
+  if (!acc) return;
+  document.getElementById('panelTitle').textContent = acc.name;
+  if (!acc.accessToken) { showToast('Akun belum login. Menghubungkan...',''); startOAuth(id); return; }
+  await loadEmails(acc);
+}
+
+async function loadEmails(acc) {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  showToast('Memuat email...','');
+  const token = await getValidToken(acc);
+  if (!token) { showToast('Token tidak valid. Login ulang.','error'); btn.classList.remove('spinning'); return; }
+  try {
+    const listRes = await fetch(
+      'https://www.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=to:@pixelsejati.shop',
+      { headers: { Authorization: 'Bearer ' + token } }
+    );
+    const listData = await listRes.json();
+    const messages = listData.messages || [];
+    if (messages.length === 0) { allEmails=[]; renderEmailList([]); showToast('Tidak ada email ditemukan.',''); btn.classList.remove('spinning'); return; }
+    const details = await Promise.all(
+      messages.slice(0,50).map(m =>
+        fetch(`https://www.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date`,
+          { headers: { Authorization: 'Bearer '+token } }).then(r=>r.json())
+      )
+    );
+    allEmails = details.map(msg => {
+      const headers = msg.payload?.headers||[];
+      const h = k => headers.find(h=>h.name===k)?.value||'';
+      return { id:msg.id, from:h('From'), to:h('To'), subject:h('Subject')||'(Tanpa subjek)', date:h('Date'), snippet:msg.snippet||'', unread:msg.labelIds?.includes('UNREAD'), raw:msg };
+    });
+    renderEmailList(allEmails);
+    showToast(`✓ ${allEmails.length} email dimuat`,'success');
+  } catch(e) { showToast('Gagal memuat: '+e.message,'error'); }
+  btn.classList.remove('spinning');
+}
+
+async function refreshEmails() {
+  if (!activeAccountId) { showToast('Pilih akun dulu.',''); return; }
+  const acc = accounts.find(a=>a.id===activeAccountId);
+  if (acc) await loadEmails(acc);
+}
+
+function renderEmailList(emails) {
+  const list = document.getElementById('emailList');
+  if (emails.length===0) {
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Tidak ada email</div><div class="empty-sub">Email dari @pixelsejati.shop akan muncul di sini</div></div>`;
+    return;
+  }
+  list.innerHTML = emails.map(em=>`
+    <div class="email-item ${em.unread?'unread':''} ${em.id===activeEmailId?'active':''}" onclick="openEmail('${em.id}')">
+      <div class="email-date">${formatDate(em.date)}</div>
+      <div class="email-from">${esc(stripEmail(em.from))}</div>
+      <div class="email-subject">${esc(em.subject)}</div>
+      <div class="email-snippet">${esc(em.snippet)}</div>
+    </div>`).join('');
+}
+
+function filterEmails() {
+  const q = document.getElementById('searchEmails').value.toLowerCase();
+  if (!q) { renderEmailList(allEmails); return; }
+  renderEmailList(allEmails.filter(e=>e.subject.toLowerCase().includes(q)||e.from.toLowerCase().includes(q)||e.snippet.toLowerCase().includes(q)));
+}
+
+async function openEmail(id) {
+  activeEmailId = id;
+  const em = allEmails.find(e=>e.id===id);
+  if (!em) return;
+  document.querySelectorAll('.email-item').forEach(el=>{
+    el.classList.toggle('active', el.getAttribute('onclick')?.includes(id));
+  });
+  document.getElementById('contentSubject').textContent = em.subject;
+  document.getElementById('contentFrom').textContent = em.from;
+  document.getElementById('contentTo').textContent = em.to;
+  document.getElementById('contentDate').textContent = new Date(em.date).toLocaleString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const acc = accounts.find(a=>a.id===activeAccountId);
+  const token = acc ? await getValidToken(acc) : null;
+  let bodyText = em.snippet;
+  let links = [];
+  if (token) {
+    try {
+      const full = await fetch(`https://www.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`,{headers:{Authorization:'Bearer '+token}}).then(r=>r.json());
+      const body = extractBody(full.payload);
+      bodyText = body.text || em.snippet;
+      links = extractLinks(body.html||body.text||'');
+    } catch {}
+  }
+  document.getElementById('contentBody').textContent = bodyText;
+  const actEl = document.getElementById('contentActions');
+  if (links.length>0) {
+    const isVerify = url=>/verif|confirm|activ|valid|click|token/i.test(url);
+    actEl.innerHTML = `<span class="action-label">Link ditemukan:</span>`+
+      links.slice(0,6).map((url,i)=>{
+        const isV=isVerify(url);
+        return `<a href="${esc(url)}" target="_blank" class="link-btn ${isV?'verify':'normal'}">${isV?'✓ Verifikasi'+(i>0?i+1:''):'Buka Link '+(i+1)}</a>`;
+      }).join('');
+    actEl.style.display='flex';
+  } else { actEl.innerHTML=''; actEl.style.display='none'; }
+  document.getElementById('contentPlaceholder').style.display='none';
+  document.getElementById('emailContent').classList.add('visible');
+}
+
+function extractBody(payload) {
+  let text='',html='';
+  function walk(part) {
+    if (!part) return;
+    if (part.mimeType==='text/plain'&&part.body?.data) text=atob(part.body.data.replace(/-/g,'+').replace(/_/g,'/'));
+    if (part.mimeType==='text/html'&&part.body?.data) html=atob(part.body.data.replace(/-/g,'+').replace(/_/g,'/'));
+    if (part.parts) part.parts.forEach(walk);
+  }
+  walk(payload); return {text,html};
+}
+
+function extractLinks(content) {
+  const urls=[]; const regex=/https?:\/\/[^\s"'<>)]+/g; let m;
+  while((m=regex.exec(content))!==null){const url=m[0].replace(/[.,;:!?]$/,'');if(!urls.includes(url))urls.push(url);}
+  return urls;
+}
+
+function stripEmail(str) { return str.replace(/<[^>]+>/g,'').trim(); }
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d=new Date(dateStr),now=new Date();
+  if (d.toDateString()===now.toDateString()) return d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString('id-ID',{day:'numeric',month:'short'});
+}
+
+function showEmailContent(em) {
+  if (!em) { document.getElementById('contentPlaceholder').style.display='flex'; document.getElementById('emailContent').classList.remove('visible'); }
+}
+
+function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+loadAccounts();
+renderSidebar();
+handleOAuthCallback();
+</script>
+</body>
+</html>
